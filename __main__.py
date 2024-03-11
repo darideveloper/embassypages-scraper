@@ -1,35 +1,26 @@
+import os
 from time import sleep
 from libs.web_scraping import WebScraping
 from tqdm import tqdm
+from dotenv import load_dotenv
+
+load_dotenv()
+CHROME_PATH = os.getenv("CHROME_PATH")
 
 
 class Scraper(WebScraping):
     
     def __init__(self):
-        """ Start chrome and load page
+        """ Start chrome
         """
         
-        home_page = "https://www.embassypages.com/spain"
-        super().__init__()
-        
-        self.set_page(home_page)
-        
-    def get_business_links(self) -> list:
-        """ Get the links of the business
-
-        Returns:
-            list: list of links
-        """
-        
-        selector_links = ".letter-block ul > li > a"
-        links = self.get_attribs(selector_links, "href")
-        return links
+        self.home_page = "https://www.embassypages.com/spain"
+        super().__init__(
+            chrome_folder=CHROME_PATH,
+        )        
     
-    def scrape_business(self, links: str) -> list:
+    def get_business_data(self) -> list:
         """ Scrape the business data
-        
-        Args:
-            links (str): link of the business
 
         Returns:
             list: business data
@@ -44,13 +35,9 @@ class Scraper(WebScraping):
             ]
                 
         """
-        
-        sleep(5)
-        
+                
         data = []
-        
-        self.set_page(links)
-        
+                
         selectors = {
             'address': '.address p',
             'phone': '.telephone a',
@@ -69,7 +56,7 @@ class Scraper(WebScraping):
             
         return data
     
-    def scrape_all_business(self) -> list:
+    def scrape_business(self) -> list:
         """ Scrape all the business data
 
         Returns:
@@ -87,18 +74,47 @@ class Scraper(WebScraping):
             ]
         """
         
+        # Show status
         print("Scraping all business...")
         
-        links = self.get_business_links()
-        data = []
+        # Load home page
+        self.set_page(self.home_page)
         
-        for link in tqdm(links):
-            data.append(self.scrape_business(link))
+        # Selectors and counters
+        selector_links = ".letter-block ul > li > a"
+        business_index = 0
+        business_num = len(self.get_elems(selector_links))
+        
+        # Get elements
+        data = []
+        while True:
             
-        return data
-                
+            # End loop when no more business
+            if business_index >= business_num:
+                break
+
+            # Debug status
+            print(f"Scraping business {business_index + 1}/{business_num}")
+            
+            # Load home page
+            sleep (20)
+            self.set_page(self.home_page)
+            
+            # Get next link and load page
+            links = self.get_elems(selector_links)
+            link = links[business_index]
+            link.click()
+            
+            # Extract data
+            business_data = self.get_business_data()
+            data.append(business_data)
+            
+            # Increase counter
+            business_index += 1
+            sleep(20)
+               
 
 if __name__ == "__main__":
     scraper = Scraper()
-    data = scraper.scrape_all_business()
+    data = scraper.scrape_business()
     print(data)
