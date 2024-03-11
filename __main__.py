@@ -1,6 +1,5 @@
 import os
 from time import sleep
-from tqdm import tqdm
 from dotenv import load_dotenv
 from libs.web_scraping import WebScraping
 from libs.xlsx import SpreadsheetManager
@@ -13,31 +12,45 @@ CHROME_PATH = os.getenv("CHROME_PATH")
 CURRENT_FOLDER = os.path.dirname(__file__)
 EXCEL_PATH = os.path.join(CURRENT_FOLDER, "data.xlsx")
 
+
 class Scraper(WebScraping):
-    
+
     def __init__(self):
         """ Start chrome and open excel file
         """
-        
+
         # Start chrome
         self.home_page = "https://www.embassypages.com/spain"
         super().__init__(
             chrome_folder=CHROME_PATH,
-        )        
+        )
         
         # Open excel path
-        self.sheet_name = "data"
+        sheet_name = "data"
         self.ss_manager = SpreadsheetManager(EXCEL_PATH)
         
         # Delete old data sheet
         try:
-            self.ss_manager.delete_sheet(self.sheet_name)
+            self.ss_manager.delete_sheet(sheet_name)
+            self.ss_manager.delete_sheet("Sheet")
         except Exception:
-            pass  
+            pass
         
         # Set sheet
-        self.ss_manager.create_set_sheet(self.sheet_name)
-                
+        self.ss_manager.create_set_sheet(sheet_name)
+        
+        # Write heder
+        header = [
+            "Name",
+            "URL",
+            "Address",
+            "Phone",
+            "Fax",
+            "Emails",
+            "Socials"
+        ]
+        self.ss_manager.write_data([header])
+        self.ss_manager.save()
     
     def get_business_data(self) -> list:
         """ Scrape the business data
@@ -103,8 +116,7 @@ class Scraper(WebScraping):
         business_index = 0
         business_num = len(self.get_elems(selector_links))
         
-        # Get elements
-        data = []
+        # Extract each business
         while True:
             
             # End loop when no more business
@@ -115,7 +127,7 @@ class Scraper(WebScraping):
             print(f"Scraping business {business_index + 1}/{business_num}")
             
             # Load home page
-            sleep (20)
+            sleep(20)
             self.set_page(self.home_page)
             
             # Get next link and load page
@@ -129,15 +141,18 @@ class Scraper(WebScraping):
             business_data = self.get_business_data()
             business_data.insert(0, business_name)
             business_data.insert(1, business_url)
-            data.append(business_data)
             
             # Increase counter
             business_index += 1
             sleep(20)
             
             # Write data in excel
-            self.ss_manager.write_data([data])
+            self.ss_manager.write_data(
+                [business_data],
+                start_row=business_index + 1
+            )
             self.ss_manager.save()
+
 
 if __name__ == "__main__":
     scraper = Scraper()
