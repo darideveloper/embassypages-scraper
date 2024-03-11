@@ -103,10 +103,14 @@ class Scraper(WebScraping):
             # Get next link and load page
             links = self.get_elems(selector_links)
             link = links[business_index]
+            business_name = link.text
+            business_url = link.get_attribute("href")
             link.click()
             
             # Extract data
             business_data = self.get_business_data()
+            business_data.insert(0, business_name)
+            business_data.insert(1, business_url)
             data.append(business_data)
             
             # Increase counter
